@@ -139,7 +139,7 @@ namespace Mono.Linker.Steps {
 					break;
 
 				case RootVisibility.PublicAndFamily:
-					markType = type.IsPublic || type.IsNestedFamily || type.IsNestedFamilyOrAssembly;
+					markType = type.IsPublic || type.IsNestedPublic || type.IsNestedFamily || type.IsNestedFamilyOrAssembly;
 					break;
 			}
 
@@ -148,7 +148,6 @@ namespace Mono.Linker.Steps {
 			}
 
 			context.Annotations.Mark (type);
-
 			context.Annotations.Push (type);
 
 			if (type.HasFields)
@@ -207,18 +206,24 @@ namespace Mono.Linker.Steps {
 		static void MarkMethod (LinkContext context, MethodDefinition method, MethodAction action, RootVisibility rootVisibility)
 		{
 			bool markMethod;
-			switch (rootVisibility) {
-				default:
-					markMethod = true;
-					break;
 
-				case RootVisibility.PublicAndFamily:
-					markMethod = method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly;
-					break;
+			if (method.HasOverrides) {
+				markMethod = true;
+			}
+			else {
+				switch (rootVisibility) {
+					default:
+						markMethod = true;
+						break;
 
-				case RootVisibility.PublicAndFamilyAndAssembly:
-					markMethod = method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly || method.IsAssembly || method.IsFamilyAndAssembly;
-					break;
+					case RootVisibility.PublicAndFamily:
+						markMethod = method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly;
+						break;
+
+					case RootVisibility.PublicAndFamilyAndAssembly:
+						markMethod = method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly || method.IsAssembly || method.IsFamilyAndAssembly;
+						break;
+				}
 			}
 
 			if (markMethod) {
