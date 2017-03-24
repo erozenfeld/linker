@@ -596,6 +596,12 @@ namespace Mono.Linker.Steps {
 				case "System.Xml.Serialization.XmlSchemaProviderAttribute":
 					MarkXmlSchemaProvider (type, attribute);
 					break;
+				case "System.Diagnostics.DebuggerDisplayAttribute":
+					MarkTypeWithDebuggerDisplayAttribute (type, attribute);
+					break;
+				case "System.Diagnostics.DebuggerTypeProxyAttribute":
+					MarkTypeWithDebuggerTypeProxyAttribute (type, attribute);
+					break;
 				}
 			}
 		}
@@ -621,6 +627,23 @@ namespace Mono.Linker.Steps {
 				return;
 
 			MarkNamedMethod (type, method_name);
+		}
+
+		void MarkTypeWithDebuggerDisplayAttribute(TypeDefinition type, CustomAttribute attribute)
+		{
+			MarkMethods (type);
+			MarkFields (type, includeStatic: false);
+		}
+
+		void MarkTypeWithDebuggerTypeProxyAttribute(TypeDefinition type, CustomAttribute attribute)
+		{
+			TypeReference proxyTypeReference = (TypeReference) attribute.ConstructorArguments[0].Value;
+
+			MarkType (proxyTypeReference);
+
+			TypeDefinition proxyType = ResolveTypeDefinition (proxyTypeReference);
+			MarkMethods (proxyType);
+			MarkFields (proxyType, includeStatic: false);
 		}
 
 		static bool TryGetStringArgument (CustomAttribute attribute, out string argument)
@@ -1208,8 +1231,12 @@ namespace Mono.Linker.Steps {
 				break;
 			case OperandType.InlineTok:
 				object token = instruction.Operand;
-				if (token is TypeReference)
+				if (token is TypeReference) {
 					MarkType ((TypeReference) token);
+					if (instruction.OpCode == OpCodes.Ldtoken) {
+						MarkDefaultConstructor (ResolveTypeDefinition((TypeReference) token));
+					}
+				}
 				else if (token is MethodReference)
 					MarkMethod ((MethodReference) token);
 				else
