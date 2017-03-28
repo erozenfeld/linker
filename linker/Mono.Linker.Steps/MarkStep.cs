@@ -1329,7 +1329,16 @@ namespace Mono.Linker.Steps {
 				if (token is TypeReference) {
 					MarkType ((TypeReference) token);
 					if (instruction.OpCode == OpCodes.Ldtoken) {
-						MarkDefaultConstructor (ResolveTypeDefinition((TypeReference) token));
+						TypeDefinition type = ResolveTypeDefinition (GetOriginalType (((TypeReference)token)));
+						if (type != null) {
+							/*if (type.Scope.Name == "System.Private.DataContractSerialization.dll") {
+								MarkMethods (type);
+							}
+							else {
+								MarkDefaultConstructor (type);
+							}*/
+							MarkMethods (type);
+						}
 					}
 				}
 				else if (token is MethodReference)
