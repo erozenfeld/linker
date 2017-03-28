@@ -597,6 +597,10 @@ namespace Mono.Linker.Steps {
 			if (IsSerializable (type))
 				MarkSerializable (type);
 
+			if (IsEventSource (type)) {
+				MarkEventSource (type);
+			}
+
 			MarkTypeSpecialCustomAttributes (type);
 
 			MarkGenericParameterProvider (type);
@@ -648,6 +652,9 @@ namespace Mono.Linker.Steps {
 				case "System.Diagnostics.DebuggerTypeProxyAttribute":
 					MarkTypeWithDebuggerTypeProxyAttribute (type, attribute);
 					break;
+				case "System.Diagnostics.Tracing.EventDataAttribute":
+					MarkTypeWithEventDataAttribute (type, attribute);
+					break;
 				}
 			}
 		}
@@ -676,6 +683,12 @@ namespace Mono.Linker.Steps {
 		}
 
 		void MarkTypeWithDebuggerDisplayAttribute(TypeDefinition type, CustomAttribute attribute)
+		{
+			MarkMethods (type);
+			MarkFields (type, includeStatic: false);
+		}
+
+		void MarkTypeWithEventDataAttribute(TypeDefinition type, CustomAttribute attribute)
 		{
 			MarkMethods (type);
 			MarkFields (type, includeStatic: false);
@@ -881,6 +894,29 @@ namespace Mono.Linker.Steps {
 			return td.BaseType != null && td.BaseType.FullName == "System.MulticastDelegate";
 		}
 
+		static bool IsEventSource (TypeDefinition td)
+		{
+			TypeReference type = td;
+			do {
+				if (type.FullName == "System.Diagnostics.Tracing.EventSource") {
+					return true;
+				}
+				TypeDefinition typeDef = type.Resolve ();
+				type = typeDef.BaseType;
+			}
+			while (type != null);
+			return false;
+		}
+
+		void MarkEventSource(TypeDefinition td)
+		{
+			foreach (var nestedType in td.NestedTypes) {
+				if ((nestedType.Name == "Keywords") || (nestedType.Name == "Tasks") || (nestedType.Name == "Opcodes")) {
+					MarkStaticFields (nestedType);
+				}
+			}
+		}
+
 		protected TypeDefinition ResolveTypeDefinition (TypeReference type)
 		{
 			TypeDefinition td = type as TypeDefinition;
@@ -1009,6 +1045,17 @@ namespace Mono.Linker.Steps {
 				if (!includeStatic && field.IsStatic)
 					continue;
 				MarkField (field);
+			}
+		}
+
+		protected void MarkStaticFields(TypeDefinition type)
+		{
+			if (!type.HasFields)
+				return;
+
+			foreach (FieldDefinition field in type.Fields) {
+				if (field.IsStatic)
+					MarkField (field);
 			}
 		}
 
