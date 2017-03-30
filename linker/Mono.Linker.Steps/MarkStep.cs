@@ -698,8 +698,7 @@ namespace Mono.Linker.Steps {
 
 		void MarkTypeWithEventDataAttribute(TypeDefinition type, CustomAttribute attribute)
 		{
-			MarkMethods (type);
-			MarkFields (type, includeStatic: false);
+			MarkMethodsIf (type.Methods, IsInstancePropertyMethod);
 		}
 
 		void MarkTypeWithDebuggerTypeProxyAttribute(TypeDefinition type, CustomAttribute attribute)
@@ -1260,6 +1259,10 @@ namespace Mono.Linker.Steps {
 		{
 			return (md.SemanticsAttributes & MethodSemanticsAttributes.Getter) != 0 ||
 				(md.SemanticsAttributes & MethodSemanticsAttributes.Setter) != 0;
+		}
+		static internal bool IsInstancePropertyMethod(MethodDefinition md)
+		{
+			return !md.IsStatic && IsPropertyMethod (md);
 		}
 
 		static bool IsEventMethod (MethodDefinition md)
